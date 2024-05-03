@@ -29,6 +29,13 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
+	go func() {
+		<-ctx.Done()
+		time.Sleep(time.Second)
+		fmt.Println("Failed to end benchmark gracefully, killing process...")
+		os.Exit(0)
+	}()
+
 	if *requests == 0 && *duration == time.Duration(0) {
 		fmt.Println("Error: must provide duration or number of requests")
 		return
