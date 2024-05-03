@@ -46,10 +46,13 @@ func main() {
 		fmt.Println("Warning: verbose mode severely decreases performance")
 	}
 
-	fmt.Printf("Starting benchmark at %s\n", time.Now().Format(time.RFC850))
 	fmt.Printf("Target URL: %s\n", *url)
 	fmt.Printf("Connections: %d\n", *connections)
 	fmt.Printf("Threads (goroutines) per connection: %d\n", *threads)
+
+	start := time.Now()
+
+	fmt.Printf("Starting benchmark at %s\n", start.Format(time.DateTime))
 
 	var sent atomic.Int64
 	var wg sync.WaitGroup
