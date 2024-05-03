@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	requests    = flag.Int("r", 0, "Number of requests per connection")
+	requests    = flag.Int("r", 0, "Number of requests (approximate)")
 	connections = flag.Int("c", 10, "Number of connections")
 	duration    = flag.Duration("d", time.Duration(0), "Duration of benchmark")
 	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
@@ -80,14 +80,21 @@ func main() {
 			}
 		}
 	} else {
-		fmt.Printf("Number of requests: %d\n", *requests)
+		fmt.Printf("Sending requests: %d\n", *requests)
+
+		req := make(chan int, *requests)
+		for i := 0; i < *requests; i++ {
+			req <- i
+		}
+		close(req)
+
 		for i := 0; i < *connections; i++ {
 			for k := 0; k < *threads; k++ {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 
-					for j := 0; j < *requests; j++ {
+					for j := range req {
 						send(j)
 						sent.Add(1)
 					}
