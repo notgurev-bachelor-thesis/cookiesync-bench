@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,6 +20,7 @@ var (
 	duration    = flag.Duration("d", time.Duration(0), "Duration of benchmark")
 	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
 	verbose     = flag.Bool("v", false, "Verbose mode")
+	threads     = flag.Int("t", runtime.NumCPU(), "Number of concurrent threads per connection")
 )
 
 func main() {
@@ -35,6 +37,7 @@ func main() {
 	fmt.Printf("Starting benchmark at %s\n", time.Now().Format(time.RFC850))
 	fmt.Printf("Target URL: %s\n", *url)
 	fmt.Printf("Connections: %d\n", *connections)
+	fmt.Printf("Threads (goroutines) per connection: %d\n", *threads)
 
 	var sent atomic.Int64
 	var wg sync.WaitGroup
@@ -45,35 +48,39 @@ func main() {
 		defer cancel()
 
 		for i := 0; i < *connections; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			for t := 0; t < *threads; t++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
 
-				j := 0
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					default:
-						j++
-						send(j)
-						sent.Add(1)
+					j := 0
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						default:
+							j++
+							send(j)
+							sent.Add(1)
+						}
 					}
-				}
-			}()
+				}()
+			}
 		}
 	} else {
 		fmt.Printf("Number of requests: %d\n", *requests)
 		for i := 0; i < *connections; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			for k := 0; k < *threads; k++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
 
-				for j := 0; j < *requests; j++ {
-					send(j)
-					sent.Add(1)
-				}
-			}()
+					for j := 0; j < *requests; j++ {
+						send(j)
+						sent.Add(1)
+					}
+				}()
+			}
 		}
 	}
 
