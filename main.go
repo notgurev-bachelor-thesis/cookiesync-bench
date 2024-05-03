@@ -26,13 +26,18 @@ var (
 func main() {
 	flag.Parse()
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	if *requests == 0 && *duration == time.Duration(0) {
 		fmt.Println("Error: must provide duration or number of requests")
 		return
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
+	if *verbose {
+		fmt.Println("Running in verbose mode")
+		fmt.Println("Warning: verbose mode severely decreases performance")
+	}
 
 	fmt.Printf("Starting benchmark at %s\n", time.Now().Format(time.RFC850))
 	fmt.Printf("Target URL: %s\n", *url)
