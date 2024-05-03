@@ -29,13 +29,15 @@ func main() {
 		return
 	}
 
-	var wg sync.WaitGroup
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	var sent atomic.Int64
+	fmt.Printf("Starting benchmark at %s\n", time.Now().Format(time.RFC850))
+	fmt.Printf("Target URL: %s\n", *url)
+	fmt.Printf("Connections: %d\n", *connections)
 
+	var sent atomic.Int64
+	var wg sync.WaitGroup
 	if *requests == 0 {
 		fmt.Printf("Duration: %s\n", duration.String())
 
@@ -77,7 +79,11 @@ func main() {
 
 	wg.Wait()
 
-	fmt.Printf("Generated total of %d requests\n", sent.Load())
+	fmt.Println("Benchmark finished")
+	fmt.Printf("Sent total of %d requests\n", sent.Load())
+	if *duration > 0 {
+		fmt.Printf("Average RPS = %f\n", float64(sent.Load())/duration.Seconds())
+	}
 }
 
 func send(i int) {
