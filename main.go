@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/valyala/fasthttp"
+	"golang.org/x/time/rate"
 	"log"
 	"math/rand"
 	"os"
@@ -22,6 +23,7 @@ var (
 	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
 	verbose     = flag.Bool("v", false, "Verbose mode")
 	threads     = flag.Int("t", runtime.NumCPU(), "Number of concurrent threads per connection")
+	limit       = flag.Int("l", 0, "Limit requests per second")
 )
 
 func main() {
@@ -50,6 +52,9 @@ func main() {
 	log.Printf("Target URL: %s\n", *url)
 	log.Printf("Connections: %d\n", *connections)
 	log.Printf("Threads (goroutines) per connection: %d\n", *threads)
+	log.Printf("Rate limit: %d r/s\n", *limit)
+
+	limiter := rate.NewLimiter(rate.Limit(*limit), 1) // no bursts
 
 	start := time.Now()
 
@@ -84,13 +89,12 @@ func main() {
 				go func() {
 					defer wg.Done()
 
-					j := 0
-					for {
+					for j := 0; ; j++ {
 						select {
 						case <-ctx.Done():
 							return
 						default:
-							j++
+							wait(ctx, limiter)
 							send(j)
 							sent.Add(1)
 						}
@@ -114,6 +118,7 @@ func main() {
 					defer wg.Done()
 
 					for j := range req {
+						wait(ctx, limiter)
 						send(j)
 						sent.Add(1)
 					}
@@ -128,6 +133,12 @@ func main() {
 	log.Printf("Sent total of %d requests\n", sent.Load())
 	if *duration > 0 {
 		log.Printf("Average RPS = %f\n", float64(sent.Load())/duration.Seconds())
+	}
+}
+
+func wait(ctx context.Context, limiter *rate.Limiter) {
+	if limiter != nil {
+		_ = limiter.Wait(ctx)
 	}
 }
 
