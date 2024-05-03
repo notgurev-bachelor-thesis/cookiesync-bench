@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/valyala/fasthttp"
+	"log"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -32,27 +33,27 @@ func main() {
 	go func() {
 		<-ctx.Done()
 		time.Sleep(time.Second)
-		fmt.Println("Failed to end benchmark gracefully, killing process...")
+		log.Println("Failed to end benchmark gracefully, killing process...")
 		os.Exit(0)
 	}()
 
 	if *requests == 0 && *duration == time.Duration(0) {
-		fmt.Println("Error: must provide duration or number of requests")
+		log.Println("Error: must provide duration or number of requests")
 		return
 	}
 
 	if *verbose {
-		fmt.Println("Running in verbose mode")
-		fmt.Println("Warning: verbose mode severely decreases performance")
+		log.Println("Running in verbose mode")
+		log.Println("Warning: verbose mode severely decreases performance")
 	}
 
-	fmt.Printf("Target URL: %s\n", *url)
-	fmt.Printf("Connections: %d\n", *connections)
-	fmt.Printf("Threads (goroutines) per connection: %d\n", *threads)
+	log.Printf("Target URL: %s\n", *url)
+	log.Printf("Connections: %d\n", *connections)
+	log.Printf("Threads (goroutines) per connection: %d\n", *threads)
 
 	start := time.Now()
 
-	fmt.Printf("Starting benchmark at %s\n", start.Format(time.DateTime))
+	log.Printf("Starting benchmark at %s\n", start.Format(time.DateTime))
 
 	var sent atomic.Int64
 
@@ -62,18 +63,17 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-time.After(time.Second):
-				fmt.Printf("%s: sent = %d, avg rps = %f\n",
-					time.Now().Format(time.DateTime),
-					sent.Load(),
-					float64(sent.Load())/time.Since(start).Seconds(),
-				)
+				elapsed := time.Since(start).Seconds()
+				s := sent.Load()
+				rps := float64(s) / elapsed
+				log.Printf("Progress: sent = %d, avg rps = %.0f r/s, elapsed = %ds\n", s, rps, int(elapsed))
 			}
 		}
 	}()
 
 	var wg sync.WaitGroup
 	if *requests == 0 {
-		fmt.Printf("Duration: %s\n", duration.String())
+		log.Printf("Duration: %s\n", duration.String())
 
 		ctx, cancel = context.WithTimeout(ctx, *duration)
 		defer cancel()
@@ -99,7 +99,7 @@ func main() {
 			}
 		}
 	} else {
-		fmt.Printf("Sending requests: %d\n", *requests)
+		log.Printf("Sending requests: %d\n", *requests)
 
 		req := make(chan int, *requests)
 		for i := 0; i < *requests; i++ {
@@ -124,10 +124,10 @@ func main() {
 
 	wg.Wait()
 
-	fmt.Println("Benchmark finished")
-	fmt.Printf("Sent total of %d requests\n", sent.Load())
+	log.Println("Benchmark finished")
+	log.Printf("Sent total of %d requests\n", sent.Load())
 	if *duration > 0 {
-		fmt.Printf("Average RPS = %f\n", float64(sent.Load())/duration.Seconds())
+		log.Printf("Average RPS = %f\n", float64(sent.Load())/duration.Seconds())
 	}
 }
 
@@ -146,7 +146,7 @@ func send(i int) {
 	resp := fasthttp.AcquireResponse()
 
 	if err := fasthttp.Do(req, resp); err != nil {
-		fmt.Printf("Error: %s\n", err)
+		log.Printf("Error: %s\n", err)
 		return
 	}
 
@@ -154,7 +154,7 @@ func send(i int) {
 	fasthttp.ReleaseResponse(resp)
 
 	if *verbose {
-		fmt.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", i+1, resp.StatusCode(), uid, d, b)
+		log.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", i+1, resp.StatusCode(), uid, d, b)
 	}
 }
 
