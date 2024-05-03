@@ -15,6 +15,8 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	var wg sync.WaitGroup
 
 	for i := 0; i < *connections; i++ {
