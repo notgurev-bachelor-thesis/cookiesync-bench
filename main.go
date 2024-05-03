@@ -1,43 +1,33 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/valyala/fasthttp"
 	"math/rand"
 	"sync"
 )
 
+var (
+	requests    = flag.Int("r", 1000, "Number of requests")
+	connections = flag.Int("c", 10, "Number of connections")
+	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
+)
+
 func main() {
-	url := "http://cl-hot1-1.moevideo.net:8080" // Target server URL
-	requests := 100                             // Number of requests per connection
-	connections := 10                           // Number of concurrent connections
-
-	generateLoad(url, requests, connections)
-}
-
-func generateRandomUID(length int) string {
-	const charset = "0123456789abcdef"
-	uid := make([]byte, length)
-	for i := range uid {
-		uid[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(uid)
-}
-
-func generateLoad(url string, requests int, connections int) {
 	var wg sync.WaitGroup
 
-	for i := 0; i < connections; i++ {
+	for i := 0; i < *connections; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
-			for j := 0; j < requests; j++ {
+			for j := 0; j < *requests; j++ {
 				uid := generateRandomUID(20)
 				d := rand.Intn(20) + 1
 				b := rand.Intn(1000000) + 1
 
-				reqURL := fmt.Sprintf("%s?d=%d&b=%d", url, d, b)
+				reqURL := fmt.Sprintf("%s?d=%d&b=%d", *url, d, b)
 
 				req := fasthttp.AcquireRequest()
 
@@ -60,4 +50,13 @@ func generateLoad(url string, requests int, connections int) {
 	}
 
 	wg.Wait()
+}
+
+func generateRandomUID(length int) string {
+	const charset = "0123456789abcdef"
+	uid := make([]byte, length)
+	for i := range uid {
+		uid[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(uid)
 }
