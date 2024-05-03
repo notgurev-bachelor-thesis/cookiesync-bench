@@ -18,6 +18,7 @@ var (
 	connections = flag.Int("c", 10, "Number of connections")
 	duration    = flag.Duration("d", time.Duration(0), "Duration of benchmark")
 	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
+	verbose     = flag.Bool("v", false, "Verbose mode")
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	var sent atomic.Int64
 
 	if *requests == 0 {
-		fmt.Println("Duration mode")
+		fmt.Printf("Duration: %s\n", duration.String())
 
 		ctx, cancel = context.WithTimeout(ctx, *duration)
 		defer cancel()
@@ -60,7 +61,7 @@ func main() {
 			}()
 		}
 	} else {
-		fmt.Println("Number of requests mode")
+		fmt.Printf("Number of requests: %d\n", *requests)
 		for i := 0; i < *connections; i++ {
 			wg.Add(1)
 			go func() {
@@ -101,7 +102,9 @@ func send(i int) {
 	fasthttp.ReleaseRequest(req)
 	fasthttp.ReleaseResponse(resp)
 
-	fmt.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", i+1, resp.StatusCode(), uid, d, b)
+	if *verbose {
+		fmt.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", i+1, resp.StatusCode(), uid, d, b)
+	}
 }
 
 func generateRandomUID(length int) string {
