@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	requests    = flag.Int("r", 1000, "Number of requests")
+	requests    = flag.Int("r", 1000, "Number of requests per connection")
 	connections = flag.Int("c", 10, "Number of connections")
 	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
 )
