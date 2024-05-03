@@ -1,57 +1,107 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/valyala/fasthttp"
 	"math/rand"
+	"os"
+	"os/signal"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 var (
-	requests    = flag.Int("r", 1000, "Number of requests per connection")
+	requests    = flag.Int("r", 0, "Number of requests per connection")
 	connections = flag.Int("c", 10, "Number of connections")
+	duration    = flag.Duration("d", time.Duration(0), "Duration of benchmark")
 	url         = flag.String("url", "http://cl-hot1-1.moevideo.net:8080", "URL of targeted server")
 )
 
 func main() {
 	flag.Parse()
 
+	if *requests == 0 && *duration == time.Duration(0) {
+		fmt.Println("Error: must provide duration or number of requests")
+		return
+	}
+
 	var wg sync.WaitGroup
 
-	for i := 0; i < *connections; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 
-			for j := 0; j < *requests; j++ {
-				uid := generateRandomUID(20)
-				d := rand.Intn(20) + 1
-				b := rand.Intn(1000000) + 1
+	var sent atomic.Int64
 
-				reqURL := fmt.Sprintf("%s?d=%d&b=%d", *url, d, b)
+	if *requests == 0 {
+		fmt.Println("Duration mode")
 
-				req := fasthttp.AcquireRequest()
+		ctx, cancel = context.WithTimeout(ctx, *duration)
+		defer cancel()
 
-				req.SetRequestURI(reqURL)
-				req.Header.SetCookie("uid", uid)
+		for i := 0; i < *connections; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-				resp := fasthttp.AcquireResponse()
-
-				if err := fasthttp.Do(req, resp); err != nil {
-					fmt.Printf("Error: %s\n", err)
-					return
+				j := 0
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						j++
+						send(j)
+						sent.Add(1)
+					}
 				}
+			}()
+		}
+	} else {
+		fmt.Println("Number of requests mode")
+		for i := 0; i < *connections; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-				fasthttp.ReleaseRequest(req)
-				fasthttp.ReleaseResponse(resp)
-
-				fmt.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", j+1, resp.StatusCode(), uid, d, b)
-			}
-		}()
+				for j := 0; j < *requests; j++ {
+					send(j)
+					sent.Add(1)
+				}
+			}()
+		}
 	}
 
 	wg.Wait()
+
+	fmt.Printf("Generated total of %d requests\n", sent.Load())
+}
+
+func send(i int) {
+	uid := generateRandomUID(20)
+	d := rand.Intn(20) + 1
+	b := rand.Intn(1000000) + 1
+
+	reqURL := fmt.Sprintf("%s?d=%d&b=%d", *url, d, b)
+
+	req := fasthttp.AcquireRequest()
+
+	req.SetRequestURI(reqURL)
+	req.Header.SetCookie("uid", uid)
+
+	resp := fasthttp.AcquireResponse()
+
+	if err := fasthttp.Do(req, resp); err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fasthttp.ReleaseRequest(req)
+	fasthttp.ReleaseResponse(resp)
+
+	fmt.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", i+1, resp.StatusCode(), uid, d, b)
 }
 
 func generateRandomUID(length int) string {
