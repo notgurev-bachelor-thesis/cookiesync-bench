@@ -55,6 +55,22 @@ func main() {
 	fmt.Printf("Starting benchmark at %s\n", start.Format(time.DateTime))
 
 	var sent atomic.Int64
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+				fmt.Printf("%s: sent = %d, avg rps = %f\n",
+					time.Now().Format(time.DateTime),
+					sent.Load(),
+					float64(sent.Load())/time.Since(start).Seconds(),
+				)
+			}
+		}
+	}()
+
 	var wg sync.WaitGroup
 	if *requests == 0 {
 		fmt.Printf("Duration: %s\n", duration.String())
