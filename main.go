@@ -7,7 +7,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"golang.org/x/time/rate"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"os"
 	"os/signal"
@@ -157,8 +157,8 @@ type Client interface {
 
 func send(client Client, i int) {
 	uid := generateRandomUID(20)
-	d := rand.Intn(20) + 1
-	b := rand.Intn(1000000) + 1
+	d := rand.IntN(20) + 1
+	b := rand.IntN(1000000) + 1
 
 	reqURL := fmt.Sprintf("%s?d=%d&b=%d", *url, d, b)
 
@@ -183,7 +183,7 @@ func generateRandomUID(length int) string {
 	const charset = "0123456789abcdef"
 	b := strings.Builder{}
 	for i := 0; i < length; i++ {
-		b.WriteByte(charset[rand.Intn(len(charset))])
+		b.WriteByte(charset[rand.IntN(len(charset))])
 	}
 	return b.String()
 }
