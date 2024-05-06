@@ -181,9 +181,9 @@ func send(client Client, i int) {
 
 func generateRandomUID(length int) string {
 	const charset = "0123456789abcdef"
-	uid := make([]byte, length)
-	for i := range uid {
-		uid[i] = charset[rand.Intn(len(charset))]
+	b := strings.Builder{}
+	for i := 0; i < length; i++ {
+		b.WriteByte(charset[rand.Intn(len(charset))])
 	}
-	return b2s(uid)
+	return b.String()
 }
