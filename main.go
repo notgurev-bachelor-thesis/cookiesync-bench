@@ -8,9 +8,11 @@ import (
 	"golang.org/x/time/rate"
 	"log"
 	"math/rand"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -84,6 +86,13 @@ func main() {
 		defer cancel()
 
 		for i := 0; i < *connections; i++ {
+			client := &fasthttp.PipelineClient{
+				Dial: func(addr string) (net.Conn, error) {
+					return fasthttp.Dial(strings.TrimPrefix(*url, "http://"))
+				},
+				//MaxConns: math.MaxInt - 2000, // Ruins performance, for some reason
+			}
+
 			for t := 0; t < *threads; t++ {
 				wg.Add(1)
 				go func() {
@@ -95,7 +104,7 @@ func main() {
 							return
 						default:
 							wait(ctx, limiter)
-							send(j)
+							send(client, j)
 							sent.Add(1)
 						}
 					}
@@ -119,7 +128,7 @@ func main() {
 
 					for j := range req {
 						wait(ctx, limiter)
-						send(j)
+						send(nil, j)
 						sent.Add(1)
 					}
 				}()
@@ -142,7 +151,11 @@ func wait(ctx context.Context, limiter *rate.Limiter) {
 	}
 }
 
-func send(i int) {
+type Client interface {
+	Do(req *fasthttp.Request, resp *fasthttp.Response) error
+}
+
+func send(client Client, i int) {
 	uid := generateRandomUID(20)
 	d := rand.Intn(20) + 1
 	b := rand.Intn(1000000) + 1
@@ -154,7 +167,7 @@ func send(i int) {
 	req.SetRequestURI(reqURL)
 	req.Header.SetCookie("uid", uid)
 
-	if err := fasthttp.Do(req, nil); err != nil {
+	if err := client.Do(req, nil); err != nil {
 		log.Printf("Error: %s\n", err)
 		return
 	}
@@ -172,5 +185,5 @@ func generateRandomUID(length int) string {
 	for i := range uid {
 		uid[i] = charset[rand.Intn(len(charset))]
 	}
-	return string(uid)
+	return b2s(uid)
 }
