@@ -154,18 +154,15 @@ func send(i int) {
 	req.SetRequestURI(reqURL)
 	req.Header.SetCookie("uid", uid)
 
-	resp := fasthttp.AcquireResponse()
-
-	if err := fasthttp.Do(req, resp); err != nil {
+	if err := fasthttp.Do(req, nil); err != nil {
 		log.Printf("Error: %s\n", err)
 		return
 	}
 
 	fasthttp.ReleaseRequest(req)
-	fasthttp.ReleaseResponse(resp)
 
 	if *verbose {
-		log.Printf("Request %d: Status %d, UID %s, d %d, b %d\n", i+1, resp.StatusCode(), uid, d, b)
+		log.Printf("Request %d: UID %s, d %d, b %d\n", i+1, uid, d, b)
 	}
 }
 
