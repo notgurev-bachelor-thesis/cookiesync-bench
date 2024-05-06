@@ -121,6 +121,13 @@ func main() {
 		close(req)
 
 		for i := 0; i < *connections; i++ {
+			client := &fasthttp.PipelineClient{
+				Dial: func(addr string) (net.Conn, error) {
+					return fasthttp.Dial(strings.TrimPrefix(*url, "http://"))
+				},
+				//MaxConns: math.MaxInt - 2000, // Ruins performance, for some reason
+			}
+
 			for k := 0; k < *threads; k++ {
 				wg.Add(1)
 				go func() {
@@ -128,7 +135,7 @@ func main() {
 
 					for j := range req {
 						wait(ctx, limiter)
-						send(nil, j)
+						send(client, j)
 						sent.Add(1)
 					}
 				}()
