@@ -54,11 +54,13 @@ func main() {
 	log.Printf("Target URL: %s\n", *url)
 	log.Printf("Connections: %d\n", *connections)
 	log.Printf("Threads (goroutines) per connection: %d\n", *threads)
-	log.Printf("Rate limit: %d r/s\n", *limit)
 
 	var limiter *rate.Limiter
 	if *limit > 0 {
 		limiter = rate.NewLimiter(rate.Limit(*limit), 1) // no bursts
+		log.Printf("Rate limit: %d r/s\n", *limit)
+	} else {
+		log.Printf("Rate limit: unlimited")
 	}
 
 	start := time.Now()
