@@ -95,7 +95,6 @@ func main() {
 				Dial: func(addr string) (net.Conn, error) {
 					return fasthttp.Dial(strings.TrimPrefix(*url, "http://"))
 				},
-				//MaxConns: math.MaxInt - 2000, // Ruins performance, for some reason
 			}
 
 			for t := 0; t < *threads; t++ {
@@ -130,7 +129,6 @@ func main() {
 				Dial: func(addr string) (net.Conn, error) {
 					return fasthttp.Dial(strings.TrimPrefix(*url, "http://"))
 				},
-				//MaxConns: math.MaxInt - 2000, // Ruins performance, for some reason
 			}
 
 			for k := 0; k < *threads; k++ {
