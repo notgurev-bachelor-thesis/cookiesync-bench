@@ -1,4 +1,4 @@
-module github.com/notgurev/cookiesync-bench
+module github.com/notgurev-bachelor-thesis/cookiesync-bench
 
 go 1.22.2
 
